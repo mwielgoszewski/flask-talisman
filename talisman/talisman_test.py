@@ -61,55 +61,55 @@ class TestTalismanExtension(unittest.TestCase):
         self.assertTrue(response.headers['Location'].startswith('https://'))
 
         # Permanent redirects
-        self.talisman.force_https_permanent = True
+        self.talisman.config['TALISMAN_FORCE_HTTPS_PERMANENT'] = True
         response = self.client.get('/')
         self.assertEqual(response.status_code, 301)
 
         # Disable forced ssl, should allow the request.
-        self.talisman.force_https = False
+        self.talisman.config['TALISMAN_FORCE_HTTPS'] = False
         response = self.client.get('/')
         self.assertEqual(response.status_code, 200)
 
     def testHstsOptions(self):
-        self.talisman.force_ssl = False
+        self.talisman.config['TALISMAN_FORCE_HTTPS'] = False
 
         # No HSTS headers for non-ssl requests
         response = self.client.get('/')
         self.assertTrue('Strict-Transport-Security' not in response.headers)
 
         # Secure request with HSTS off
-        self.talisman.strict_transport_security = False
+        self.talisman.config['TALISMAN_STRICT_TRANSPORT_SECURITY'] = False
         response = self.client.get('/', environ_overrides=HTTPS_ENVIRON)
         self.assertTrue('Strict-Transport-Security' not in response.headers)
 
         # No subdomains
-        self.talisman.strict_transport_security = True
-        self.talisman.strict_transport_security_include_subdomains = False
+        self.talisman.config['TALISMAN_STRICT_TRANSPORT_SECURITY'] = True
+        self.talisman.config['TALISMAN_STRICT_TRANSPORT_SECURITY_INCLUDE_SUBDOMAINS'] = False
         response = self.client.get('/', environ_overrides=HTTPS_ENVIRON)
         self.assertTrue(
             'includeSubDomains' not in
             response.headers['Strict-Transport-Security'])
 
     def testFrameOptions(self):
-        self.talisman.frame_options = DENY
+        self.talisman.config['TALISMAN_FRAME_OPTIONS'] = DENY
         response = self.client.get('/', environ_overrides=HTTPS_ENVIRON)
         self.assertEqual(response.headers['X-Frame-Options'], 'DENY')
 
-        self.talisman.frame_options = ALLOW_FROM
-        self.talisman.frame_options_allow_from = 'example.com'
+        self.talisman.config['TALISMAN_FRAME_OPTIONS'] = ALLOW_FROM
+        self.talisman.config['TALISMAN_FRAME_OPTIONS_ALLOW_FROM'] = 'example.com'
         response = self.client.get('/', environ_overrides=HTTPS_ENVIRON)
         self.assertEqual(
             response.headers['X-Frame-Options'], 'ALLOW-FROM example.com')
 
     def testContentSecurityPolicyOptions(self):
-        self.talisman.content_security_policy['image-src'] = '*'
+        self.talisman.config['TALISMAN_CONTENT_SECURITY_POLICY']['image-src'] = '*'
         response = self.client.get('/', environ_overrides=HTTPS_ENVIRON)
         csp = response.headers['Content-Security-Policy']
         self.assertTrue('default-src \'self\'' in csp)
         self.assertTrue('image-src *' in csp)
 
-        self.talisman.content_security_policy['image-src'] = [
-            '\'self\'',
+        self.talisman.config['TALISMAN_CONTENT_SECURITY_POLICY']['image-src'] = [
+            "'self'",
             'example.com'
         ]
         response = self.client.get('/', environ_overrides=HTTPS_ENVIRON)
@@ -117,14 +117,14 @@ class TestTalismanExtension(unittest.TestCase):
         self.assertTrue('default-src \'self\'' in csp)
         self.assertTrue('image-src \'self\' example.com' in csp)
 
-        # sting policy
-        self.talisman.content_security_policy = 'default-src example.com'
+        # string policy
+        self.talisman.config['TALISMAN_CONTENT_SECURITY_POLICY'] = 'default-src example.com'
         response = self.client.get('/', environ_overrides=HTTPS_ENVIRON)
         self.assertEqual(response.headers['Content-Security-Policy'],
                          'default-src example.com')
 
         # no policy
-        self.talisman.content_security_policy = False
+        self.talisman.config['TALISMAN_CONTENT_SECURITY_POLICY'] = False
         response = self.client.get('/', environ_overrides=HTTPS_ENVIRON)
         self.assertTrue('Content-Security-Policy' not in response.headers)
 
