@@ -169,7 +169,7 @@ class Talisman(object):
         headers['X-Frame-Options'] = self.local_options.frame_options
 
         if self.local_options.frame_options == ALLOW_FROM:
-            headers['X-Frame-Options'] += " {}".format(
+            headers['X-Frame-Options'] += " {0}".format(
                 self.local_options.frame_options_allow_from)
 
     def _set_content_security_policy_headers(self, headers):
@@ -183,7 +183,7 @@ class Talisman(object):
 
         if not isinstance(policy, string_types):
             policies = [
-                '{} {}'.format(
+                '{0} {1}'.format(
                     k,
                     ' '.join(v) if not isinstance(v, string_types) else v)
                 for (k, v)
@@ -201,7 +201,7 @@ class Talisman(object):
             not flask.request.is_secure:
             return
 
-        value = 'max-age={}'.format(
+        value = 'max-age={0}'.format(
             self.config['TALISMAN_STRICT_TRANSPORT_SECURITY_MAX_AGE'])
 
         if self.config['TALISMAN_STRICT_TRANSPORT_SECURITY_INCLUDE_SUBDOMAINS']:
