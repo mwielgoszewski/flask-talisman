@@ -94,24 +94,25 @@ class Talisman(object):
         See README.rst for a detailed description of each option.
         """
 
-        self.force_https = force_https
-        self.force_https_permanent = force_https_permanent
+        self.config = app.config
 
-        self.frame_options = frame_options
-        self.frame_options_allow_from = frame_options_allow_from
+        self.config.setdefault('TALISMAN_FORCE_HTTPS', force_https)
+        self.config.setdefault('TALISMAN_FORCE_HTTPS_PERMANENT', force_https_permanent)
 
-        self.strict_transport_security = strict_transport_security
-        self.strict_transport_security_max_age =\
-            strict_transport_security_max_age
-        self.strict_transport_security_include_subdomains =\
-            strict_transport_security_include_subdomains
+        self.config.setdefault('TALISMAN_FRAME_OPTIONS', frame_options)
+        self.config.setdefault('TALISMAN_FRAME_OPTIONS_ALLOW_FROM', frame_options_allow_from)
 
-        self.content_security_policy = content_security_policy.copy()
+        self.config.setdefault('TALISMAN_STRICT_TRANSPORT_SECURITY', strict_transport_security)
+        self.config.setdefault('TALISMAN_STRICT_TRANSPORT_SECURITY_MAX_AGE', strict_transport_security_max_age)
+        self.config.setdefault('TALISMAN_STRICT_TRANSPORT_SECURITY_INCLUDE_SUBDOMAINS', strict_transport_security_include_subdomains)
 
-        self.session_cookie_secure = session_cookie_secure
+        self.config.setdefault('TALISMAN_CONTENT_SECURITY_POLICY', content_security_policy.copy())
+
+        if (session_cookie_secure or force_https) and not app.debug:
+            app.config['SESSION_COOKIE_SECURE'] = True
 
         if session_cookie_http_only:
-            app.config['SESSION_COOKIE_HTTPONLY'] = True
+            app.config.setdefault('SESSION_COOKIE_HTTPONLY', True)
 
         self.app = app
         self.local_options = Local()
@@ -128,13 +129,13 @@ class Talisman(object):
         """Updates view-local options with defaults or specified values."""
         setattr(self.local_options, 'frame_options',
                 frame_options if frame_options is not _sentinel
-                else self.frame_options)
+                else self.config['TALISMAN_FRAME_OPTIONS'])
         setattr(self.local_options, 'frame_options_allow_from',
                 frame_options_allow_from if frame_options_allow_from
-                is not _sentinel else self.frame_options_allow_from)
+                is not _sentinel else self.config['TALISMAN_FRAME_OPTIONS_ALLOW_FROM'])
         setattr(self.local_options, 'content_security_policy',
                 content_security_policy if content_security_policy
-                is not _sentinel else self.content_security_policy)
+                is not _sentinel else self.config['TALISMAN_CONTENT_SECURITY_POLICY'])
 
     def _force_https(self):
         """Redirect any non-https requests to https.
@@ -142,21 +143,17 @@ class Talisman(object):
         Based largely on flask-sslify.
         """
 
-        if self.session_cookie_secure:
-            if not self.app.debug:
-                self.app.config['SESSION_COOKIE_SECURE'] = True
-
         criteria = [
             self.app.debug,
             flask.request.is_secure,
             flask.request.headers.get('X-Forwarded-Proto', 'http') == 'https',
         ]
 
-        if self.force_https and not any(criteria):
+        if self.config['TALISMAN_FORCE_HTTPS'] and not any(criteria):
             if flask.request.url.startswith('http://'):
                 url = flask.request.url.replace('http://', 'https://', 1)
                 code = 302
-                if self.force_https_permanent:
+                if self.config['TALISMAN_FORCE_HTTPS_PERMANENT']:
                     code = 301
                 r = flask.redirect(url, code=code)
                 return r
@@ -200,12 +197,14 @@ class Talisman(object):
         headers['X-Content-Security-Policy'] = policy
 
     def _set_hsts_headers(self, headers):
-        if not self.strict_transport_security or not flask.request.is_secure:
+        if not self.config['TALISMAN_STRICT_TRANSPORT_SECURITY'] or \
+            not flask.request.is_secure:
             return
 
-        value = 'max-age={}'.format(self.strict_transport_security_max_age)
+        value = 'max-age={}'.format(
+            self.config['TALISMAN_STRICT_TRANSPORT_SECURITY_MAX_AGE'])
 
-        if self.strict_transport_security_include_subdomains:
+        if self.config['TALISMAN_STRICT_TRANSPORT_SECURITY_INCLUDE_SUBDOMAINS']:
             value += '; includeSubDomains'
 
         value += '; preload'
