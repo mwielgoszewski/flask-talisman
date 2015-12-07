@@ -108,7 +108,8 @@ class Talisman(object):
 
         self.config.setdefault('TALISMAN_CONTENT_SECURITY_POLICY', content_security_policy.copy())
 
-        if (session_cookie_secure or force_https) and not app.debug:
+        if (self.config['SESSION_COOKIE_SECURE'] or
+            self.config['TALISMAN_FORCE_HTTPS']) and not app.debug:
             app.config['SESSION_COOKIE_SECURE'] = True
 
         if session_cookie_http_only:
