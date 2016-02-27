@@ -148,6 +148,7 @@ class Talisman(object):
             self.app.debug,
             flask.request.is_secure,
             flask.request.headers.get('X-Forwarded-Proto', 'http') == 'https',
+            flask.request.remote_addr in ('127.0.0.1', 'localhost'),
         ]
 
         if self.config['TALISMAN_FORCE_HTTPS'] and not any(criteria):
@@ -200,6 +201,9 @@ class Talisman(object):
     def _set_hsts_headers(self, headers):
         if not self.config['TALISMAN_STRICT_TRANSPORT_SECURITY'] or \
             not flask.request.is_secure:
+            return
+
+        if flask.request.remote_addr in ('127.0.0.1', 'localhost'):
             return
 
         value = 'max-age={0}'.format(
